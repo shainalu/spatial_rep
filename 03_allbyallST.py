@@ -24,8 +24,8 @@ import random
 ST_CANTIN_FILT_PATH = "/home/slu/spatial/data/cantin_ST_filt_v2.h5"
 ONTOLOGY_PATH = "/data/slu/allen_adult_mouse_ISH/ontologyABA.csv"
 #outfiles
-OUT_PATH_TEST = "allbyallST0p1permute_test0628.csv"
-OUT_PATH_TRAIN = "allbyallST0p1permute_train0628.csv"
+OUT_PATH_TEST = "allbyallST0p01_f2_test051121.csv"
+OUT_PATH_TRAIN = "allbyallST0p01_f2_train051121.csv"
 
 ######################################################################################
 #preprocessing functions
@@ -108,7 +108,7 @@ def analytical_auroc(featurevector, binarylabels):
 
 def applyLASSO(Xtrain, Xtest, ytrain, ytest):
     """apply LASSO regression"""
-    lasso_reg = Lasso(alpha=0.1, max_iter=10000)
+    lasso_reg = Lasso(alpha=0.01, max_iter=10000)
     #lasso_reg = LinearRegression()
     lasso_reg.fit(Xtrain, ytrain)
     
@@ -137,12 +137,13 @@ def getallbyall(data, propont):
             area1 = areas[i]
             area2 = areas[j]
             #get binary label vectors
-            ylabels1 = propont.loc[propont[area1]+propont[area2] != 0, area1]
-            ylabels = pd.Series(np.random.permutation(ylabels1),index=ylabels1.index) #try permuting
+            ylabels = propont.loc[propont[area1]+propont[area2] != 0, area1]
+            #ylabels = pd.Series(np.random.permutation(ylabels1),index=ylabels1.index) #try permuting
             #subset train and test sets for only samples in the two areas
             Xcurr = data.loc[propont[area1]+propont[area2] != 0, :]
             #split train test for X data and y labels
-            #split data function is seeded so all will split the same wa
+            #split data function is seeded so all will split the same way
+            #note original split was 42, trying 9 to show robust
             Xtrain, Xtest, ytrain, ytest = train_test_split(Xcurr, ylabels, test_size=0.5,\
                                                             random_state=42, shuffle=True,\
                                                             stratify=ylabels)
@@ -151,7 +152,7 @@ def getallbyall(data, propont):
             zXtrain = zscore(Xtrain)
             zXtest = zscore(Xtest)
             
-            #NOTE: train test folds filpped for this run for fold 2
+            #NOTE: flip train test folds in below function call to get opposite fold
             currauroc_train, currauroc_test = applyLASSO(zXtest, zXtrain, ytest, ytrain)
             allbyall_train.iloc[i,j] = currauroc_train
             allbyall_test.iloc[i,j] = currauroc_test

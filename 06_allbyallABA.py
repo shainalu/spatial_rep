@@ -22,8 +22,8 @@ import random
 #globals to reset as needed
 ALLEN_FILT_PATH = "/home/slu/spatial/data/ABAISH_filt_v6_avgdup.h5"
 ONTOLOGY_PATH = "/data/slu/allen_adult_mouse_ISH/ontologyABA.csv"
-OUT_PATH_1 = "allbyallABA0p1permute_test0628.csv"
-OUT_PATH_2 = "allbyallABA0p1permute_train0628.csv"
+OUT_PATH_1 = "allbyallABA0p1newsplit_f1_test031621.csv"
+OUT_PATH_2 = "allbyallABA0p1newsplit_f1_train031621.csv"
     
 ######################################################################################
 #preprocessing functions
@@ -149,14 +149,16 @@ def getallbyall(data, propont):
             Xcurr = data.loc[propont[area1]+propont[area2] != 0, :]
             #split train test for X data and y labels
             #split data function is seeded so all will split the same way
+            #note original split was 42, trying 9 to show robust
             Xtrain, Xtest, ytrain, ytest = train_test_split(Xcurr, ylabels, test_size=0.5,\
-                                                            random_state=42, shuffle=True,\
+                                                            random_state=9, shuffle=True,\
                                                             stratify=ylabels)
 
             #z-score train and test folds
             zXtrain = zscore(Xtrain)
             zXtest = zscore(Xtest)
             
+            #NOTE: flip train test folds in below function call to get opposite fold
             currauroc_train, currauroc_test = applyLASSO(zXtrain, zXtest, ytrain, ytest)
             allbyall_train.iloc[i,j] = currauroc_train
             allbyall_test.iloc[i,j] = currauroc_test

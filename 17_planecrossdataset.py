@@ -25,13 +25,13 @@ import random
 ALLEN_FILT_PATH = "/home/slu/spatial/data/ABAISH_filt_v6.h5" #non-averaged version
 ONTOLOGY_PATH = "/data/slu/allen_adult_mouse_ISH/ontologyABA.csv"
 ST_CANTIN_FILT_PATH = "/home/slu/spatial/data/cantin_ST_filt_v2.h5"
-ALLEN_PLANES_PATH = '/home/slu/spatial/ABAplanes_v2.h5'
+ALLEN_PLANES_PATH = '/home/slu/spatial/data/ABAplanes_v2.h5'
 
 #outfiles
-MOD_TEST_OUT = "crossplane_SAGtest_0p1_053120.csv"
-MOD_TRAIN_OUT = "crossplane_SAGtrain_0p1_053120.csv"
-CROSS1_ALL_OUT = "crossplane_SAGtoST_0p1_053120.csv"
-CROSS2_ALL_OUT = "crossplane_SAGtoCOR_0p1_053120.csv"
+MOD_TEST_OUT = "crossplane100_SAGtest_0p1_032721.csv"
+MOD_TRAIN_OUT = "crossplane100_SAGtrain_0p1_032721.csv"
+CROSS1_ALL_OUT = "crossplane100_SAGtoCOR_0p1_032721.csv"
+CROSS2_ALL_OUT = "crossplane100_SAGtoST_0p1_032721.csv"
 
 ################################################################################################
 #read in data and pre-processing functions
@@ -65,12 +65,11 @@ def read_ABAplanes():
     
     return sagvoxbrain, corvoxbrain
 
-def filterproponto(sampleonto):
+def filterproponto(sampleonto, cutoff):
     """pre-processing for propogated ontology"""
     #remove brain areas that don't have any samples
     sampleonto_sums = sampleonto.apply(lambda col: col.sum(), axis=0)
-    sampleonto = sampleonto.loc[:,sampleonto_sums > 5] #greater than 5 becuase less is not enough for train/test split to have non-zero areas
-    
+    sampleonto = sampleonto.loc[:,sampleonto_sums > cutoff]
     return sampleonto
 
 def getleaves(propontvox, ontology):
@@ -233,6 +232,7 @@ def getallbyall(mod_data, mod_propont, cross1_data, cross1_propont, cross2_data,
             allbyall_cross1.iloc[i,j] = currauroc_cross1
             allbyall_cross2.iloc[i,j] = currauroc_cross2
             #curr_row[0,j] = currauroc
+            #break
             
         #if i == 1:
         #break
@@ -250,16 +250,27 @@ def main():
     sagvoxbrain, corvoxbrain = read_ABAplanes()
     
     #filter brain areas for those that have at least x samples
-    STpropont = filterproponto(STpropont)
-    ABApropont = filterproponto(ABApropont)
+    STpropont = filterproponto(STpropont, 100)
+    ABApropont = filterproponto(ABApropont, 100)
     #filter brain areas for overlapping leaf areas
     STpropont, ABApropont = findoverlapareas(STpropont, ABApropont, ontology)
     
     #keep only genes that are overlapping between the datasets
     corvoxbrain, sagvoxbrain, STspots = getoverlapgenes(corvoxbrain, sagvoxbrain, STspots)
     
+    #remove rows that don't have any samples
+    STrowsum = STpropont.sum(axis=1)
+    STpropont = STpropont.loc[STrowsum > 0, :]
+    STspots = STspots.loc[STrowsum > 0, :]
+
+    ABArowsum = ABApropont.sum(axis=1)
+    ABApropont = ABApropont.loc[ABArowsum > 0, :]
+    corvoxbrain = corvoxbrain.loc[ABArowsum > 0, :]
+    sagvoxbrain = sagvoxbrain.loc[ABArowsum > 0, :]
+    print("overlapping areas with X samples: %d" %ABApropont.shape[1])
+    
     #predictability matrix using LASSO
-    allbyall_train, allbyall_test, allbyall_cross1, allbyall_cross2 = getallbyall(sagvoxbrain, ABApropont, STspots, STpropont, corvoxbrain, ABApropont)
+    allbyall_train, allbyall_test, allbyall_cross1, allbyall_cross2 = getallbyall(sagvoxbrain, ABApropont, corvoxbrain, ABApropont, STspots, STpropont)
     
     allbyall_test.to_csv(MOD_TEST_OUT, sep=',', header=True, index=False)
     allbyall_train.to_csv(MOD_TRAIN_OUT, sep=',', header=True, index=False)

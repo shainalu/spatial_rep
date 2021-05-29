@@ -19,6 +19,7 @@ from scipy import stats
 from sklearn import metrics
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split #stratify train/test split
 import random
@@ -29,9 +30,9 @@ ONTOLOGY_PATH = "/data/slu/allen_adult_mouse_ISH/ontologyABA.csv"
 ST_CANTIN_FILT_PATH = "/home/slu/spatial/data/cantin_ST_filt_v2.h5"
 
 #outfiles
-MOD_TEST_OUT = "ABAtoST_ABAtest_f1_0p05_051720.csv"
-MOD_TRAIN_OUT = "ABAtoST_ABAtrain_f1_0p05_051720.csv"
-CROSS_ALL_OUT = "ABAtoST_STall_f1_0p05_051720.csv"
+MOD_TEST_OUT = "STtoABA_STtest_f1_0p1newsplit_031921.csv"
+MOD_TRAIN_OUT = "STtoABA_STtrain_f1_0p1newsplit_031921.csv"
+CROSS_ALL_OUT = "STtoABA_ABAall_f1_0p1newsplit_031921.csv"
 
 ################################################################################################
 #read data and pre-processing functions
@@ -158,8 +159,9 @@ def getoverlapgenes(STspots, ABAvox):
 def applyLASSO(Xtrain, Xtest, Xcross, ytrain, ytest, ycross):
     """apply LASSO regression"""
     #lasso_reg = sklearn.linear_model.Lasso(alpha=alphaval)
-    lasso_reg = Lasso(alpha=0.05,max_iter=10000) #alpha=alphaval) #,max_iter=10000)
+    lasso_reg = Lasso(alpha=0.1,max_iter=10000) #alpha=alphaval) #,max_iter=10000)
     #lasso_reg = LinearRegression()
+    #lasso_reg = LogisticRegression(penalty='l1', solver='saga', max_iter=10000, multi_class='ovr')
     lasso_reg.fit(Xtrain, ytrain)
     
     #train
@@ -202,7 +204,7 @@ def getallbyall(mod_data, mod_propont, cross_data, cross_propont):
             #split train test for X data and y labels
             #split data function is seeded so all will split the same way
             Xtrain, Xtest, ytrain, ytest = train_test_split(Xcurr, ylabels, test_size=0.5,\
-                                                            random_state=42, shuffle=True,\
+                                                            random_state=9, shuffle=True,\
                                                             stratify=ylabels)
             #z-score train and test folds
             zXtrain = zscore(Xtrain)
@@ -237,7 +239,7 @@ def main():
     STspots, ABAvox = getoverlapgenes(STspots, ABAvox)
     
     #predictability matrix using LASSO
-    allbyall_train, allbyall_test, allbyall_cross = getallbyall(ABAvox, ABApropont, STspots, STpropont)
+    allbyall_train, allbyall_test, allbyall_cross = getallbyall(STspots, STpropont, ABAvox, ABApropont)
     
     allbyall_test.to_csv(MOD_TEST_OUT, sep=',', header=True, index=False)
     allbyall_train.to_csv(MOD_TRAIN_OUT, sep=',', header=True, index=False)
